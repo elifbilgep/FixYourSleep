@@ -14,7 +14,7 @@ protocol FirebaseIdentifiable: Codable, Identifiable {
 
 protocol FirebaseServiceProtocol {
     var database: Firestore { get }
-    func getOne<T: Decodable>(of type: T.Type, with query: Query) async -> Result<T, Error>
+    func getOne<T: Codable>(of type: T.Type, with query: Query) async -> Result<T, Error> 
     func getMany<T: Decodable>(of type: T.Type,with query: Query) async -> Result<[T], Error>
     func put<T: FirebaseIdentifiable>(_ value: T, to collection: String) async -> Result<T, Error>
     func delete<T: FirebaseIdentifiable>(_ value: T, in collection: String) async -> Result<Void, Error>
@@ -34,22 +34,23 @@ enum Collections: String {
 }
 
 extension FirebaseService {
-    func getOne<T: Decodable>(of type: T.Type, with query: Query) async -> Result<T, Error> {
+    func getOne<T: Codable>(of type: T.Type, with query: Query) async -> Result<T, Error> {
         do {
-            let querySnapshot = try await query.getDocuments()
-            if let document = querySnapshot.documents.first {
-                let data = try document.data(as: T.self)
-                return .success(data)
-            } else {
-                print("Warning: \(#function) document not found")
-                return .failure(FirebaseError.documentNotFound)
+            let snapshot = try await query.getDocuments()
+            guard let document = snapshot.documents.first else {
+                print("❌ No document found")
+                return .failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Document not found"]))
             }
-        } catch let error {
-            print("Error: \(#function) couldn't access snapshot, \(error)")
+            
+            let jsonData = try JSONSerialization.data(withJSONObject: document.data())
+            let decoder = JSONDecoder()
+            let result = try decoder.decode(T.self, from: jsonData)
+            return .success(result)
+        } catch {
+            print("❌ Error decoding document:", error)
             return .failure(error)
         }
     }
-    
     func getMany<T: Decodable>(of type: T.Type,with query: Query) async -> Result<[T], Error> {
         do {
             var response: [T] = []

@@ -44,13 +44,7 @@ struct SignUpView: View {
         }
         .onChange(of: userStateManager.authState) { oldValue, newValue in
             if newValue == .signedIn {
-                if let user = userStateManager.fysUser {
-                    if user.goalSleepingTime != nil {
-                        router.navigateTo(to: .home)
-                    } else {
-                        router.navigateTo(to: .onBoarding)
-                    }
-                }
+                router.navigateTo(to: .onBoarding)
             }
         }
         .sheet(isPresented: $isSheetingPresented) {
@@ -116,14 +110,15 @@ struct SignUpView: View {
         }
         .frame(width: UIScreen.screenWidth - 50 , height: 50, alignment: .leading)
     }
-
+    
     
     //MARK: Sign Up Button
     @ViewBuilder
     private var signUpButton: some View {
         Button {
             Task {
-                try await viewModel.signUp(username: username, email: email, password: password)
+                let user = try await viewModel.signUp(username: username, email: email, password: password)
+                userStateManager.fysUser = user
             }
         } label: {
             Text("Sign up")

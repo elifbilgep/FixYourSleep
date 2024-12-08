@@ -14,6 +14,7 @@ protocol ViewModelFactoryProtocol {
     func makeSignInViewModel() -> SignInViewModel
     func makeSplashViewModel() -> SplashViewModel
     func makeOnboardingViewModel() -> OnboardingViewModel
+    func makeSleeepRotuineViewModel() -> SleepRoutineViewModel
 }
 
 class ViewModelFactory: ViewModelFactoryProtocol {
@@ -42,6 +43,10 @@ class ViewModelFactory: ViewModelFactoryProtocol {
     }
     
     func makeOnboardingViewModel() -> OnboardingViewModel {
-        return OnboardingViewModel(userService: userService)
+        return OnboardingViewModel(userService: userService, authManager: authManager)
+    }
+    
+    func makeSleeepRotuineViewModel() -> SleepRoutineViewModel {
+        return SleepRoutineViewModel(isPreview: true)
     }
 }

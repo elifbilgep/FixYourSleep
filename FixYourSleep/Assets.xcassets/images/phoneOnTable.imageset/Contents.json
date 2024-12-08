@@ -1,0 +1,21 @@
+{
+  "images" : [
+    {
+      "filename" : "elifbilgeparlak_A_minimalist_illustration_of_a_smartphone_on_a__5ccdd754-de5e-4159-8ccb-c4931c625946 (1).png",
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

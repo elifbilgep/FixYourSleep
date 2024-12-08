@@ -9,38 +9,49 @@ import SwiftUI
 
 struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
-    @EnvironmentObject private var userStateManager: UserStateManager
-    @State private var selectedDate: Date = Date()
     @EnvironmentObject private var userSateManager: UserStateManager
     @EnvironmentObject private var router: RouterManager
+    @EnvironmentObject private var userStateManager: UserStateManager
+    @State private var selectedDate: Date = Date()
     
+    private var user: FYSUser? { userSateManager.fysUser }
     
     init(viewModel: HomeViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
     
+    private var sleepTimeText: String {
+        guard let user, let goalTime = user.goalSleepingTime else {
+            return "Not set"
+        }
+        return goalTime
+    }
+    
+    private var userLogs: [SleepData] {
+        user?.sleepData ?? []
+    }
+    
     var body: some View {
         ZStack {
             Color.blackBg
+                .frame(height: UIScreen.screenHeight)
             VStack {
                 appBarView
                 titleView
                 calendarView
-                goalView
                 startSleepingView
+                challengeView
+                
                 Spacer()
             }
         }
         .ignoresSafeArea()
         .navigationBarBackButtonHidden()
-        .onAppear() {
-            
-        }
-        .onChange(of: userSateManager.authState) { newValue in
+        .onChange(of: userSateManager.authState, { oldValue, newValue in
             if newValue == .signedOut {
                 router.navigateTo(to: .welcome)
             }
-        }
+        })
     }
     
     //MARK: Appbar View
@@ -107,21 +118,31 @@ struct HomeView: View {
                             Circle()
                                 .fill(isDateSelected(date) ? Color.customAccent : .customGray)
                                 .frame(width: 18, height: 18)
-                            
-                            
+                                .overlay {
+                                    if Calendar.current.isDateInToday(date) {
+                                        // Empty circle for today
+                                    } else if let isCompleted = getSleepDataStatus(for: date) {
+                                        Image(systemName: isCompleted ? "checkmark" : "xmark")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(isCompleted ? .white : .red)
+                                    } else {
+                                        Image(systemName: "xmark")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
                         }
                     }
             }
         }
-        
     }
     
-    //MARK: Goal View
+    //MARK: Challenge View
     @ViewBuilder
-    private var goalView: some View {
+    private var challengeView: some View {
         VStack {
             HStack(alignment: .bottom) {
-                Text("Your Goal Schedule")
+                Text("Weekly Sleep Challenge")
                     .font(.albertSans(.semibold, size: 24))
                 Spacer()
                 Text("Edit")
@@ -146,13 +167,13 @@ struct HomeView: View {
                         HStack {
                             Image(systemName: "moon.fill")
                                 .font(.system(size: 16))
-                            Text("Sleep at 11 pm")
+                            Text("Sleep at \(sleepTimeText)")
                                 .font(.albertSans(.semibold, size: 20))
                             Spacer()
                         }
                         Text("Get enough sleep to recharge your body")
                             .font(.albertSans(.semibold, size: 18))
-                        LinearProgressView(progress: 0.4)
+                        LinearProgressView(progress: 0)
                         Text("Sleep at 11 pm 5 more days to complete monthly goal")
                             .font(.albertSans(.bold, size: 12))
                             .foregroundStyle(.gray)
@@ -161,7 +182,6 @@ struct HomeView: View {
                 }
         }
         .padding()
-        .padding(.top)
     }
     
     //MARK: Start Sleeping
@@ -189,13 +209,22 @@ struct HomeView: View {
                     .padding()
                 }
         }
-        .padding(.horizontal)
+        .padding()
+        .onTapGesture {
+            router.navigateTo(to: .sleep)
+        }
     }
-
     
-    
+    //MARK: Is Date Selected
     private func isDateSelected(_ date: Date) -> Bool {
         Calendar.current.isDate(date, equalTo: selectedDate, toGranularity: .day)
+    }
+    
+    //MARK: get sleep datta status
+    private func getSleepDataStatus(for date: Date) -> Bool? {
+        return userLogs.first { log in
+            Calendar.current.isDate(log.date, inSameDayAs: date)
+        }?.isCompleted
     }
 }
 #Preview {

@@ -25,7 +25,7 @@ class SignUpViewModel: ObservableObject {
         self.userService = userService
     }
     
-    func signUp(username: String, email: String, password: String) async throws {
+    func signUp(username: String, email: String, password: String) async throws -> FYSUser {
         try await mailSignUp(mail: email, password: password)
         let currentUser = try await authManager.getCurrentUser()
         
@@ -40,6 +40,8 @@ class SignUpViewModel: ObservableObject {
         )
         
         try await createNewUserForMailSignUp(user: newUser)
+        
+        return newUser
     }
     
     func googleSignIn() {
@@ -87,7 +89,7 @@ class SignUpViewModel: ObservableObject {
             _ = await userService.createUser(newUser)
         }
     }
-    
+    @MainActor
     func mailSignUp(mail: String, password: String) async throws {
         isLoading = true
         defer { isLoading = false }

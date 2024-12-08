@@ -18,6 +18,7 @@ final class RouterManager: ObservableObject {
         case signUp
         case signIn
         case onBoarding
+        case sleep
     }
     
     func navigateTo(to destination: Destination) {

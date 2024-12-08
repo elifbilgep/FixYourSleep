@@ -8,7 +8,7 @@
 import Foundation
 import FirebaseAuth
 
-
+@MainActor
 class UserStateManager: ObservableObject {
     @Published var user: User?
     @Published var fysUser: FYSUser?
@@ -36,6 +36,8 @@ class UserStateManager: ObservableObject {
             self.authState = isAnonymous ? .authenticated : .signedIn
         } else {
             self.authState = .signedOut
+            self.fysUser = nil
+            self.user = nil
         }
         print("‼️ User state changed: \(authState)")
     }

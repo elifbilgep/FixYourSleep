@@ -61,7 +61,9 @@ struct FixYourSleepApp: App {
         case .signUp:
             SignUpView(viewModel: viewModelFactory.makeSignUpViewModel())
         case .onBoarding:
-            OnboardingView(onboardingViewModel: viewModelFactory.makeOnboardingViewModel() )
+            OnboardingView(onboardingViewModel: viewModelFactory.makeOnboardingViewModel())
+        case .sleep:
+            SleepRoutineView(viewModel: viewModelFactory.makeSleeepRotuineViewModel())
         }
     }
 }

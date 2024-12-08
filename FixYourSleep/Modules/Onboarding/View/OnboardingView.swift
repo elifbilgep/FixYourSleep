@@ -81,25 +81,29 @@ struct OnboardingView: View {
                 Text(error.localizedDescription)
             }
         }
+        .onAppear {
+
+//            print("onboarrding view fysuser:", userStateManager.fysUser?.id)
+//            print("onboarrding view user:", userStateManager.user?.uid)
+        }
     }
     
     private func handleContinue() {
-        guard let user = userStateManager.fysUser else {
-            router.navigateTo(to: .home)
-            return
-        }
-        
         Task {
             // Update the user's sleep time
-            await viewModel.updateGoalSleepingTime(
-                for: user,
-                newTime: timeFormatter.string(from: selectedDate)
-            )
-            
+            if let user = userStateManager.fysUser {
+                print("🧠 there fyu user")
+                await viewModel.updateGoalSleepingTime(
+                    for: user,
+                    newTime: timeFormatter.string(from: selectedDate)
+                )
+            } else {
+                print("🧠 there no fyu user")
+            }
             // Only navigate if there was no error
             if viewModel.error == nil {
                 await MainActor.run {
-                    router.navigateTo(to: .home)
+                    router.navigateTo(to: .splash)
                 }
             }
         }

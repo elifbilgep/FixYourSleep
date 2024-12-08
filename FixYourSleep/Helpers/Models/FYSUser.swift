@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct FYSUser: FirebaseIdentifiable, Hashable {
+struct FYSUser: FirebaseIdentifiable, Codable {
     var id: String
     let userName: String
     let email: String
@@ -15,5 +15,5 @@ struct FYSUser: FirebaseIdentifiable, Hashable {
     let notificationTime: String?
     let isAlarmEnabled: Bool?
     let isNotificationEnabled: Bool?
+    var sleepData: [SleepData]?
 }
- 

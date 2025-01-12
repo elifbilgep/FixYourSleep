@@ -117,7 +117,7 @@ struct SignUpView: View {
     private var signUpButton: some View {
         Button {
             Task {
-                let user = try await viewModel.signUp(username: username, email: email, password: password)
+                let _ = try await viewModel.signUp(username: username, email: email, password: password)
             }
         } label: {
             Text("Sign up")
@@ -151,6 +151,7 @@ struct SignUpView: View {
                 viewModel.handleAppleSignInCompletion(result)
             }
         )
+        .frame(width: UIScreen.screenWidth - 50 , height: 50)
         .signInWithAppleButtonStyle(.black)
         .cornerRadius(10)
         .foregroundColor(.white)

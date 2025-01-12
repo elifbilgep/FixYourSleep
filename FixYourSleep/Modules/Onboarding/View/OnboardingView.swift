@@ -43,7 +43,12 @@ struct OnboardingView: View {
                     currentTab: $currentTab,
                     viewModel: viewModel)
                     .tag(2)
-                PageFour()
+                PageFour(
+                    bedTime: $bedTime,
+                    wakeUpTime: $wakeUpTime,
+                    showTimePicker: $showTimePicker,
+                    showWakeUpPicker: $showWakeUpPicker
+                )
                     .tag(3)
             }
             .tabViewStyle(.page)

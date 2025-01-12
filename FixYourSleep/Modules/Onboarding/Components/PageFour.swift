@@ -8,8 +8,21 @@
 import SwiftUI
 
 struct PageFour: View {
+    // Bindings for state passed from the parent view
+    @Binding var bedTime: Date
+    @Binding var wakeUpTime: Date
+    @Binding var showTimePicker: Bool
+    @Binding var showWakeUpPicker: Bool
+    
+    private let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
+    
     var body: some View {
         VStack(spacing: 50) {
+            // Header
             VStack(alignment: .leading, spacing: 6) {
                 Text("When do you want to sleep?")
                     .font(.albertSans(.semibold, size: 40))
@@ -18,8 +31,9 @@ struct PageFour: View {
             }
             .padding(.leading, 20)
             .padding(.top, 80)
-            .frame(width: UIScreen.screenWidth, alignment: .leading)
+            .frame(width: UIScreen.main.bounds.width, alignment: .leading)
             
+            // Bedtime Section
             VStack {
                 Text("Bedtime")
                     .font(.system(size: 20, weight: .semibold))
@@ -34,6 +48,7 @@ struct PageFour: View {
                     }
             }
 
+            // Wake-up Time Section
             VStack {
                 Text("Wake-up Time")
                     .font(.system(size: 20, weight: .semibold))
@@ -65,9 +80,16 @@ struct PageFour: View {
                     )
                 }
             }
-        )    }
+        )
+    }
 }
 
 #Preview {
-    PageFour()
+    // Provide sample bindings for the preview
+    PageFour(
+        bedTime: .constant(Date()),
+        wakeUpTime: .constant(Date()),
+        showTimePicker: .constant(false),
+        showWakeUpPicker: .constant(false)
+    )
 }

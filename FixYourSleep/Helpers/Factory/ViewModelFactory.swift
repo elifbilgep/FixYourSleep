@@ -20,10 +20,12 @@ protocol ViewModelFactoryProtocol {
 class ViewModelFactory: ViewModelFactoryProtocol {
     let authManager: AuthManagerProtocol
     let userService: UserServiceProtocol
+    let notificationManager: NotificationManager
     
-    init(authManager: AuthManagerProtocol, userService: UserServiceProtocol) {
+    init(authManager: AuthManagerProtocol, userService: UserServiceProtocol, notificationManager: NotificationManager) {
         self.authManager = authManager
         self.userService = userService
+        self.notificationManager = notificationManager
     }
     
     func makeSignUpViewModel() -> SignUpViewModel {
@@ -43,7 +45,7 @@ class ViewModelFactory: ViewModelFactoryProtocol {
     }
     
     func makeOnboardingViewModel() -> OnboardingViewModel {
-        return OnboardingViewModel(userService: userService, authManager: authManager)
+        return OnboardingViewModel(notificationManager: notificationManager, userService: userService, authManager: authManager)
     }
     
     func makeSleeepRotuineViewModel() -> SleepRoutineViewModel {

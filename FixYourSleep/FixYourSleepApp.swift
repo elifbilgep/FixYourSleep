@@ -20,6 +20,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 @main
 struct FixYourSleepApp: App {
     @StateObject private var router = RouterManager()
+    private let notificationmanager: NotificationManager
     private let viewModelFactory: ViewModelFactoryProtocol
     @StateObject private var userStateManager = UserStateManager()
     init() {
@@ -28,15 +29,14 @@ struct FixYourSleepApp: App {
         let firebaseService = FirebaseService(database: firestore)
         let authManager = AuthManager()
         let userService = UserService(firebaseService: firebaseService)
-        viewModelFactory = ViewModelFactory(authManager: authManager, userService: userService)
+        self.notificationmanager = NotificationManager.shared
+        viewModelFactory = ViewModelFactory(authManager: authManager, userService: userService, notificationManager: notificationmanager)
     }
     
     var body: some Scene {
         WindowGroup {
             NavigationStack(path: $router.navigationPath) {
-                //OnboardingView(viewModel: viewModelFactory.makeOnboardingViewModel())
                 SplashView(viewModel: viewModelFactory.makeSplashViewModel())
-                // HomeView(viewModel: viewModelFactory.makeHomeViewModel())
                     .navigationDestination(for: RouterManager.Destination.self) { destination in
                         destinationView(for: destination)
                     }

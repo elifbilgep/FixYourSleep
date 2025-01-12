@@ -1,0 +1,14 @@
+
+# macOS system files
+.DS_Store
+
+# Swift and Xcode files
+*.xcuserstate
+*.xcworkspace
+DerivedData/
+Pods/
+
+# API Keys and Configuration
+*.plist
+Secrets/
+.env

@@ -13,6 +13,8 @@ struct SleepRoutineView: View {
     @StateObject private var viewModel: SleepRoutineViewModel
     @AppStorage("isFirstTime") private var isFirstTime: Bool = true
     @State private var isSheetPresented = false
+    @AppStorage(AppStorageKeys.isSleepingRightNow) private var isSleepingRightNow: Bool = false
+    @EnvironmentObject private var router: RouterManager
     
     init(viewModel: SleepRoutineViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -26,6 +28,10 @@ struct SleepRoutineView: View {
                 titleView
                 tasksView
                 Spacer()
+                CustomButton(title: "Continue") {
+                    isSheetPresented = true
+                }
+                .padding(.bottom, 150)
             }
         }
         .ignoresSafeArea()
@@ -56,7 +62,7 @@ struct SleepRoutineView: View {
         VStack(alignment: .leading) {
             Text("Prepare for sleep")
                 .font(.albertSans(.bold, size: 32))
-            Text("Goal: Sleeping at \(userStateManager.fysUser?.goalSleepingTime ?? "23:00")")
+            Text("Goal: Sleeping at \(userStateManager.fysUser?.bedTime ?? "00:00")")
                 .font(.albertSans(.semibold, size: 20))
         }
         .padding(.horizontal)
@@ -76,7 +82,6 @@ struct SleepRoutineView: View {
                 ZStack {
                     if viewModel.steps.firstIndex(where: { $0.id == step.id }) == currentStep {
                         Image(systemName: "chevron.forward")
-                            .foregroundColor(.white)
                         
                         if isFirstTime {
                             TapHereAnimation()
@@ -90,9 +95,10 @@ struct SleepRoutineView: View {
                     isFirstTime = false
                 }
             }
-            .padding()
-            .frame(width: UIScreen.screenWidth)
+            .padding(.horizontal)
+            .frame(width: UIScreen.screenWidth, height: 20)
         }
+        .padding(.top)
     }
     
     //MARK: Sheet View
@@ -184,8 +190,7 @@ struct SleepRoutineView: View {
                 }
             }
             
-            
-            CustomButton(title: "I understand") {
+            CustomButton(title: "Done") {
                 withAnimation {
                     currentStep += 1
                     viewModel.completeStepAndAddNext(0)
@@ -205,68 +210,67 @@ struct SleepRoutineView: View {
                 Text("I will be waiting...")
                     .font(.albertSans(.semibold, size: 28))
                     .frame(width: 350, height: 30)
-                    .padding(.top, 30)
-                Text("Read a book while I play calming sounds")
-                    .font(.albertSans(.regular, size: 18))
-                    .frame(width: 350, height: 50)
+                    .padding(.bottom)
+                Text("I'll be here for the next 10 minutes. Take this time to read a book and unwind before bed.")
+                    .font(.albertSans(.regular, size: 16))
+                    .frame(width: 350, height: 60)
                     .multilineTextAlignment(.center)
             }
-        
-            // Sound options
-            GeometryReader { geometry in
-                HStack(spacing: 0) {
-                    ForEach(["Rain", "Ocean", "White Noise"], id: \.self) { sound in
-                        VStack {
-                            Circle()
-                                .fill(Color.customAccent.opacity(0.2))
-                                .frame(width: 50, height: 50)
-                                .overlay {
-                                    Image(systemName: viewModel.selectedSound == sound ? "pause.circle.fill" : "play.circle.fill")
-                                        .foregroundColor(.customAccent)
-                                        .font(.system(size: 24))
-                                }
-                            Text(sound)
-                                .font(.albertSans(.regular, size: 14))
-                                .foregroundColor(.gray)
-                        }
-                        .frame(width: geometry.size.width / 3) // This ensures equal spacing
-                        .onTapGesture {
-                            viewModel.playSound(sound)
-                        }
-                    }
-                }
-            }
-            .frame(height: 60) // Adjust this height as needed
-        
             
             // Timer Text
             Text(viewModel.formatTime())
                 .font(.system(size: 64, weight: .bold))
-                .padding(.vertical, 20)
-                
-            // Button
-            if viewModel.timeRemaining == 0 {
-                CustomButton(title: "Continue") {
-                    withAnimation {
-                        currentStep += 1
-                        viewModel.completeStepAndAddNext(1)
+            
+            // Buttons
+            VStack(spacing: 16) {
+                if viewModel.timeRemaining == 0 {
+                    CustomButton(title: "Continue") {
+                        withAnimation {
+                            currentStep += 1
+                            viewModel.completeStepAndAddNext(1)
+                        }
+                        isSheetPresented = false
                     }
-                    isSheetPresented = false
+                } else if !viewModel.isTimerRunning {
+                    VStack(spacing: 20) {
+                        CustomButton(title: "Start timer") {
+                            withAnimation {
+                                viewModel.startTimer()
+                            }
+                        }
+                        Text("Cancel the sleep")
+                            .foregroundStyle(.red)
+                            .font(.albertSans(.regular, size: 16))
+                            .onTapGesture {
+                                cancelTheSleep()
+                            }
+                    }
+                    
+                } else {
+                    Button(action: {
+                        withAnimation {
+                            viewModel.stopTimer()
+                            viewModel.timeRemaining = 600
+                        }
+                    }) {
+                        Text("Cancel Timer")
+                            .foregroundColor(.red)
+                            .font(.albertSans(.semibold, size: 16))
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.red, lineWidth: 2)
+                            )
+                    }
                 }
-            } else if !viewModel.isTimerRunning {
-                CustomButton(title: "Start timer") {
-                    viewModel.startTimer()
-                }
-            } else {
-                Text("Please wait until the timer ends")
-                    .foregroundColor(.gray)
             }
         }
         .frame(width: 350)
-        .interactiveDismissDisabled(viewModel.isTimerRunning) // Prevent dismissal while timer is running
+        .interactiveDismissDisabled(viewModel.isTimerRunning)
         .onDisappear {
             if !viewModel.isTimerRunning {
-                viewModel.timeRemaining = 600 // Reset timer if sheet is dismissed without starting
+                viewModel.timeRemaining = 600
             }
         }
     }
@@ -274,45 +278,51 @@ struct SleepRoutineView: View {
     //MARK: Put Phone Away View
     @ViewBuilder
     private var putYourPhoneAway: some View {
-       VStack(spacing: 24) {
-           // Header
-           VStack(spacing: 16) {
-               Text("Put the phone far away")
-                   .font(.albertSans(.semibold, size: 28))
-               Image("phoneOnTable")
-                   .resizable()
-                   .scaledToFit()
-                   .cornerRadius(15)
-                   .padding(.vertical)
-               Text("After 3 minutes, I'll start monitoring your phone's movement. Any phone activity will indicate you're not sleeping.")
-                   .font(.albertSans(.regular, size: 18))
-                   .multilineTextAlignment(.center)
-                   .foregroundColor(.gray)
-           }
-           .padding(.vertical)
-        
-           CustomButton(title: "I understand") {
-               withAnimation {
-                   currentStep += 1
-                   viewModel.completeStepAndAddNext(2)
-               }
-               isSheetPresented = false
-           }
-           .padding(.bottom, 20)
-       }
-       .padding(.horizontal)
-       .frame(width: 350)
+        VStack(spacing: 24) {
+            // Header
+            VStack {
+                Text("Put the phone far away")
+                    .font(.albertSans(.semibold, size: 28))
+                Image("phoneOnTable")
+                    .resizable()
+                    .scaledToFit()
+                    .padding(.vertical, 4)
+                    .cornerRadius(15)
+                Text("After 3 minutes, I'll start monitoring your phone's movement. Any phone activity will indicate you're not sleeping.")
+                    .font(.albertSans(.regular, size: 18))
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.gray)
+            }
+            .padding(.vertical)
+            
+            CustomButton(title: "I understand") {
+                viewModel.completeStepAndAddNext(2)
+                isSheetPresented = false
+                isSleepingRightNow = true
+                withAnimation(.easeInOut(duration: 1)) {
+                    router.navigateTo(to: .home)
+                }
+            }
+            .padding(.bottom, 20)
+        }
+        .padding(.horizontal)
+        .frame(width: 350)
     }
-
+    
+    private func cancelTheSleep() {
+        isSheetPresented = false
+        router.navigateTo(to: .home)
+    }
 }
 
+//MARK: Step
 struct Step: Identifiable {
     var id: String = UUID().uuidString
     var stepTitle: String
     var isCompleted: Bool
 }
 
-
+//MARK: Status Dot View
 struct StatusDotView: View {
     let isCompleted: Bool
     
@@ -350,9 +360,3 @@ struct StatusDotView: View {
         }
     }
 }
-
-#Preview(body: {
-    SleepRoutineView(viewModel: SleepRoutineViewModel(isPreview: true))
-        .environmentObject(UserStateManager())
-        .preferredColorScheme(.dark)
-})

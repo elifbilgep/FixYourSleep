@@ -118,7 +118,6 @@ struct SignUpView: View {
         Button {
             Task {
                 let user = try await viewModel.signUp(username: username, email: email, password: password)
-                userStateManager.fysUser = user
             }
         } label: {
             Text("Sign up")
@@ -153,8 +152,8 @@ struct SignUpView: View {
             }
         )
         .signInWithAppleButtonStyle(.black)
-        .frame(height: 50)
-        .cornerRadius(15)
+        .cornerRadius(10)
+        .foregroundColor(.white)
     }
     
     @ViewBuilder
@@ -169,7 +168,7 @@ struct SignUpView: View {
                     HStack {
                         Image(systemName: "g.circle.fill")
                         Text("Continue with Google")
-                            .fontWeight(.semibold)
+                            .fontWeight(.bold)
                     }
                     .foregroundStyle(.white)
                 }

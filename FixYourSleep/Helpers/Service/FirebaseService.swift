@@ -14,10 +14,12 @@ protocol FirebaseIdentifiable: Codable, Identifiable {
 
 protocol FirebaseServiceProtocol {
     var database: Firestore { get }
-    func getOne<T: Codable>(of type: T.Type, with query: Query) async -> Result<T, Error> 
+    func getOne<T: Codable>(of type: T.Type, with query: Query) async -> Result<T, Error>
     func getMany<T: Decodable>(of type: T.Type,with query: Query) async -> Result<[T], Error>
-    func put<T: FirebaseIdentifiable>(_ value: T, to collection: String) async -> Result<T, Error>
+    func save<T: FirebaseIdentifiable>(_ value: T, to collection: String) async -> Result<T, Error>
     func delete<T: FirebaseIdentifiable>(_ value: T, in collection: String) async -> Result<Void, Error>
+    func update<T: FirebaseIdentifiable>(_ value: T, in collection: String, with fields: [String: Any]) async -> Result<Bool, Error>
+    func updateField(in collection: String, documentID: String, fields: [String: Any]) async -> Result<Bool, Error>
 }
 
 class FirebaseService: FirebaseServiceProtocol {
@@ -25,6 +27,25 @@ class FirebaseService: FirebaseServiceProtocol {
     
     init(database: Firestore) {
         self.database = database
+    }
+}
+enum FirebaseError: LocalizedError {
+    case documentNotFound
+    case decodingFailed(Error)
+    case encodingFailed(Error)
+    case unknown(Error)
+    
+    var errorDescription: String? {
+        switch self {
+        case .documentNotFound:
+            return "No document found matching the query."
+        case .decodingFailed(let error):
+            return "Failed to decode document data. Error: \(error.localizedDescription)"
+        case .encodingFailed(let error):
+            return "Failed to encode object to Firestore. Error: \(error.localizedDescription)"
+        case .unknown(let error):
+            return "An unknown error occurred: \(error.localizedDescription)"
+        }
     }
 }
 
@@ -38,62 +59,55 @@ extension FirebaseService {
         do {
             let snapshot = try await query.getDocuments()
             guard let document = snapshot.documents.first else {
-                print("❌ No document found")
-                return .failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Document not found"]))
+                return .failure(FirebaseError.documentNotFound)
             }
             
-            let jsonData = try JSONSerialization.data(withJSONObject: document.data())
-            let decoder = JSONDecoder()
-            let result = try decoder.decode(T.self, from: jsonData)
-            return .success(result)
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: document.data())
+                let result = try JSONDecoder().decode(T.self, from: jsonData)
+                return .success(result)
+            } catch {
+                return .failure(FirebaseError.decodingFailed(error))
+            }
         } catch {
-            print("❌ Error decoding document:", error)
-            return .failure(error)
+            return .failure(FirebaseError.unknown(error))
         }
     }
-    func getMany<T: Decodable>(of type: T.Type,with query: Query) async -> Result<[T], Error> {
+    
+    
+    func getMany<T: Decodable>(of type: T.Type, with query: Query) async -> Result<[T], Error> {
         do {
-            var response: [T] = []
             let querySnapshot = try await query.getDocuments()
-            
-            for document in querySnapshot.documents {
+            let results: [T] = try querySnapshot.documents.compactMap { document in
                 do {
-                    let data = try document.data(as: T.self)
-                    response.append(data)
-                } catch let error {
-                    print("Error: \(#function) document(s) not decoded from data, \(error)")
-                    return .failure(error)
+                    let jsonData = try JSONSerialization.data(withJSONObject: document.data())
+                    return try JSONDecoder().decode(T.self, from: jsonData)
+                } catch {
+                    throw FirebaseError.decodingFailed(error)
                 }
             }
-            return .success(response)
-        } catch let error {
-            print("Error: couldn't access snapshot, \(error)")
-            return .failure(error)
+            return .success(results)
+        } catch {
+            return .failure(FirebaseError.unknown(error))
         }
     }
-    
-    func post<T: FirebaseIdentifiable>(_ value: T, to collection: String) async -> Result<T, Error> {
-        let documentID = value.id
-        let ref = database.collection(collection).document(documentID)
-        
-        do {
-            try ref.setData(from: value)
-            return .success(value)
-        } catch let error {
-            print("Error: \(#function) in collection: \(collection), \(error)")
-            return .failure(error)
-        }
-    }
-    
-    
-    func put<T: FirebaseIdentifiable>(_ value: T, to collection: String) async -> Result<T, Error> {
+    func save<T: FirebaseIdentifiable>(_ value: T, to collection: String) async -> Result<T, Error> {
         let ref = database.collection(collection).document(value.id)
         do {
             try ref.setData(from: value)
             return .success(value)
-        } catch let error {
-            print("Error: \(#function) in \(collection) for id: \(value.id), \(error)")
-            return .failure(error)
+        } catch {
+            return .failure(FirebaseError.encodingFailed(error))
+        }
+    }
+    
+    func update<T: FirebaseIdentifiable>(_ value: T, in collection: String, with fields: [String: Any]) async -> Result<Bool, Error> {
+        let ref = database.collection(collection).document(value.id)
+        do {
+            try await ref.updateData(fields)
+            return .success(true)
+        } catch {
+            return .failure(FirebaseError.unknown(error))
         }
     }
     
@@ -107,9 +121,19 @@ extension FirebaseService {
             return .failure(error)
         }
     }
-}
-
-enum FirebaseError: Error {
-    case documentNotFound
+    
+    func updateField(
+           in collection: String,
+           documentID: String,
+           fields: [String: Any]
+       ) async -> Result<Bool, Error> {
+           let ref = database.collection(collection).document(documentID)
+           do {
+               try await ref.updateData(fields)
+               return .success(true)
+           } catch {
+               return .failure(FirebaseError.unknown(error))
+           }
+       }
 }
 

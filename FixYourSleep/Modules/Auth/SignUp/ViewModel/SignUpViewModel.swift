@@ -33,10 +33,12 @@ class SignUpViewModel: ObservableObject {
             id: currentUser.uid,
             userName: username,
             email: email,
-            goalSleepingTime: nil,
+            bedTime: nil,
+            wakeTime: nil,
             notificationTime: nil,
             isAlarmEnabled: nil,
-            isNotificationEnabled: nil
+            isNotificationEnabled: nil,
+            sleepData: nil
         )
         
         try await createNewUserForMailSignUp(user: newUser)
@@ -69,10 +71,12 @@ class SignUpViewModel: ObservableObject {
                 id: userId,
                 userName: authUser.name,
                 email: authUser.email,
-                goalSleepingTime: nil,
+                bedTime: nil,
+                wakeTime: nil,
                 notificationTime: nil,
                 isAlarmEnabled: nil,
-                isNotificationEnabled: nil
+                isNotificationEnabled: nil,
+                sleepData: nil
             )
             _ = await userService.updateUser(updatedUser)
             
@@ -81,10 +85,12 @@ class SignUpViewModel: ObservableObject {
                 id: userId,
                 userName: authUser.name,
                 email: authUser.email,
-                goalSleepingTime: nil,
+                bedTime: nil,
+                wakeTime: nil,
                 notificationTime: nil,
                 isAlarmEnabled: nil,
-                isNotificationEnabled: nil
+                isNotificationEnabled: nil,
+                sleepData: nil
             )
             _ = await userService.createUser(newUser)
         }
@@ -107,10 +113,12 @@ class SignUpViewModel: ObservableObject {
             id: user.id,
             userName: user.userName,
             email: user.email,
-            goalSleepingTime: nil,
+            bedTime: nil,
+            wakeTime: nil,
             notificationTime: nil,
             isAlarmEnabled: nil,
-            isNotificationEnabled: nil
+            isNotificationEnabled: nil,
+            sleepData: nil
         )
         
         let result = await userService.createUser(newUser)
@@ -149,10 +157,12 @@ class SignUpViewModel: ObservableObject {
                                 id: userId,
                                 userName: userName,
                                 email: email,
-                                goalSleepingTime: nil,
+                                bedTime: nil,
+                                wakeTime: nil,
                                 notificationTime: nil,
                                 isAlarmEnabled: nil,
-                                isNotificationEnabled: nil
+                                isNotificationEnabled: nil,
+                                sleepData: nil
                             )
                             
                             let result = await userService.getUser(id: userId)

@@ -31,7 +31,7 @@ class ViewModelFactory: ViewModelFactoryProtocol {
     }
     
     func makeHomeViewModel() -> HomeViewModel {
-        return HomeViewModel(authManager: authManager)
+        return HomeViewModel(authManager: authManager, userService: userService)
     }
     
     func makeSignInViewModel() -> SignInViewModel {
@@ -47,6 +47,6 @@ class ViewModelFactory: ViewModelFactoryProtocol {
     }
     
     func makeSleeepRotuineViewModel() -> SleepRoutineViewModel {
-        return SleepRoutineViewModel(isPreview: true)
+        return SleepRoutineViewModel()
     }
 }

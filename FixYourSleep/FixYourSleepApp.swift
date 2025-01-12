@@ -22,7 +22,6 @@ struct FixYourSleepApp: App {
     @StateObject private var router = RouterManager()
     private let viewModelFactory: ViewModelFactoryProtocol
     @StateObject private var userStateManager = UserStateManager()
-    
     init() {
         FirebaseApp.configure()
         let firestore = Firestore.firestore()
@@ -35,6 +34,7 @@ struct FixYourSleepApp: App {
     var body: some Scene {
         WindowGroup {
             NavigationStack(path: $router.navigationPath) {
+                //OnboardingView(viewModel: viewModelFactory.makeOnboardingViewModel())
                 SplashView(viewModel: viewModelFactory.makeSplashViewModel())
                 // HomeView(viewModel: viewModelFactory.makeHomeViewModel())
                     .navigationDestination(for: RouterManager.Destination.self) { destination in
@@ -61,9 +61,11 @@ struct FixYourSleepApp: App {
         case .signUp:
             SignUpView(viewModel: viewModelFactory.makeSignUpViewModel())
         case .onBoarding:
-            OnboardingView(onboardingViewModel: viewModelFactory.makeOnboardingViewModel())
+            OnboardingView(viewModel: viewModelFactory.makeOnboardingViewModel())
         case .sleep:
             SleepRoutineView(viewModel: viewModelFactory.makeSleeepRotuineViewModel())
+        case .editRoutineView:
+            EditGoalRoutineView(homeViewModel: viewModelFactory.makeHomeViewModel())
         }
     }
 }

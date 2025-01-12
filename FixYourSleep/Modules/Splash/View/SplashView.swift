@@ -13,11 +13,12 @@ struct Star: Identifiable {
 }
 
 struct SplashView: View {
+    //MARK: Properties
     @EnvironmentObject var userStateManager: UserStateManager
     @EnvironmentObject var router: RouterManager
     @State private var textOpacity = 0.0
     @StateObject private var viewModel: SplashViewModel
-    
+    @AppStorage(AppStorageKeys.isFirstTime) private var isFirstTime: Bool = true
     @State private var stars = (0...80).map { _ in
         Star(
             position: CGPoint(
@@ -28,6 +29,7 @@ struct SplashView: View {
         )
     }
     
+    //MARK: Init
     init(viewModel: SplashViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
@@ -70,16 +72,15 @@ struct SplashView: View {
             //            }
             animateStars()
             animateText()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
                 checkUser()
             }
-            
-            
-            
         }
+        .navigationBarBackButtonHidden()
         
     }
     
+    //MARK: Animate start
     private func animateStars() {
         for index in stars.indices {
             withAnimation(
@@ -93,6 +94,7 @@ struct SplashView: View {
         }
     }
     
+    //MARK: Animate text
     private func animateText() {
         withAnimation(
             .easeIn(duration: 1.0)
@@ -102,24 +104,29 @@ struct SplashView: View {
         }
     }
     
+    //MARK: Check User
     private func checkUser() {
-        if userStateManager.authState == .signedIn {
-            if let user = userStateManager.user {
-                Task {
-                    if let fetchedUser =
-                        await viewModel.fetchUserIfAvailable(with: user.uid) {
-                        router.navigateTo(to: .home)
-                        userStateManager.fysUser = fetchedUser
-                    } else {
-                        router.navigateTo(to: .welcome)
-                        Task {
-                          try await viewModel.signOut()
+        if isFirstTime  {
+            router.navigateTo(to: .onBoarding)
+        } else {
+            if userStateManager.authState == .signedIn {
+                if let user = userStateManager.user {
+                    Task {
+                        if let fetchedUser =
+                            await viewModel.fetchUserIfAvailable(with: user.uid) {
+                            router.navigateTo(to: .home)
+                            userStateManager.fysUser = fetchedUser
+                        } else {
+                            router.navigateTo(to: .welcome)
+                            Task {
+                                try await viewModel.signOut()
+                            }
                         }
                     }
                 }
+            } else {
+                router.navigateTo(to: .welcome)
             }
-        } else {
-            router.navigateTo(to: .welcome)
         }
     }
 }

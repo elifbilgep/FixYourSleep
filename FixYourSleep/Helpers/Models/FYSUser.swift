@@ -11,9 +11,10 @@ struct FYSUser: FirebaseIdentifiable, Codable {
     var id: String
     let userName: String
     let email: String
-    let goalSleepingTime: String?
+    let bedTime: String?
+    let wakeTime: String?
     let notificationTime: String?
     let isAlarmEnabled: Bool?
     let isNotificationEnabled: Bool?
-    var sleepData: [SleepData]?
+    let sleepData: [SleepData]?
 }

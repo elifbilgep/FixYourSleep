@@ -6,27 +6,40 @@
 //
 
 import SwiftUI
+import WidgetKit
 
 struct HomeView: View {
+    //MARK: Properties
     @StateObject private var viewModel: HomeViewModel
     @EnvironmentObject private var userSateManager: UserStateManager
     @EnvironmentObject private var router: RouterManager
-    @EnvironmentObject private var userStateManager: UserStateManager
     @State private var selectedDate: Date = Date()
-    
+    @State private var showNotSleepTimeAlert: Bool = false
     private var user: FYSUser? { userSateManager.fysUser }
+    @AppStorage(AppStorageKeys.isSleepingRightNow) private var isSleepingRightNow: Bool = false
+    @AppStorage(AppStorageKeys.bedTimeGoal) private var bedTimeGoal = "00:00"
+    @AppStorage(AppStorageKeys.wakeTimeGoal) private var wakeTimeGoal = "00:00"
+    @State private var hideTimer = false
+    @State private var showCanceledView = false
+    private var (primaryColor1, secondaryColor1) = extractDominantColors(from: "sleepyBoy")
     
+    //MARK: Init
     init(viewModel: HomeViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
     }
     
+    //MARK: Sleep Time Text
     private var sleepTimeText: String {
-        guard let user, let goalTime = user.goalSleepingTime else {
+        guard let user, let goalTime = user.bedTime else {
             return "Not set"
         }
+        UserDefaults(suiteName: "group.com.elifbilgeparlak.fixyoursleep")?
+            .set(goalTime, forKey: "sleepGoal")
+        WidgetCenter.shared.reloadAllTimelines()
         return goalTime
     }
     
+    //MARK: UserLogs
     private var userLogs: [SleepData] {
         user?.sleepData ?? []
     }
@@ -41,17 +54,30 @@ struct HomeView: View {
                 calendarView
                 startSleepingView
                 challengeView
-                
                 Spacer()
+            }
+            if isSleepingRightNow {
+                isSleepingView
+            }
+            
+            if showCanceledView {
+                afterSleepCanceledView
             }
         }
         .ignoresSafeArea()
         .navigationBarBackButtonHidden()
+        .onChange(of: isSleepingRightNow) { oldValue, newValue in
+            if oldValue == true && newValue == false {
+                showCanceledView = true
+                viewModel.stopMotionDetection()
+            }
+        }
         .onChange(of: userSateManager.authState, { oldValue, newValue in
             if newValue == .signedOut {
                 router.navigateTo(to: .welcome)
             }
         })
+        
     }
     
     //MARK: Appbar View
@@ -95,14 +121,14 @@ struct HomeView: View {
     private var calendarView: some View {
         let calendar = Calendar.current
         let today = Date()
-        let week = calendar.dateInterval(of: .weekOfMonth, for: today)!
-        let days = calendar.generateDates(
-            inside: week,
-            matching: DateComponents(hour: 0, minute: 0, second: 0)
-        )
+        
+        // Calculate dates centered around today
+        let dates = (-3...3).compactMap { offset in
+            calendar.date(byAdding: .day, value: offset, to: today)
+        }
         
         HStack(spacing: 8) {
-            ForEach(days, id: \.timeIntervalSince1970) { date in
+            ForEach(dates, id: \.timeIntervalSince1970) { date in
                 RoundedRectangle(cornerRadius: 10)
                     .fill(isDateSelected(date) ? .customAccentDark : .darkGray)
                     .frame(width: 45, height: 90, alignment: .center)
@@ -115,22 +141,24 @@ struct HomeView: View {
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(isDateSelected(date) ? .white : .white.opacity(0.8))
                             
-                            Circle()
-                                .fill(isDateSelected(date) ? Color.customAccent : .customGray)
-                                .frame(width: 18, height: 18)
-                                .overlay {
-                                    if Calendar.current.isDateInToday(date) {
-                                        // Empty circle for today
-                                    } else if let isCompleted = getSleepDataStatus(for: date) {
-                                        Image(systemName: isCompleted ? "checkmark" : "xmark")
-                                            .font(.system(size: 10, weight: .bold))
-                                            .foregroundColor(isCompleted ? .white : .red)
-                                    } else {
-                                        Image(systemName: "xmark")
-                                            .font(.system(size: 10, weight: .bold))
-                                            .foregroundColor(.white)
-                                    }
-                                }
+                            //                            Circle()
+                            //                                .fill(isDateSelected(date) ? Color.customAccent : .customGray)
+                            //                                .frame(width: 18, height: 18)
+                            //                                .overlay {
+                            //                                    if calendar.isDateInToday(date) {
+                            //                                        // Empty circle for today
+                            //                                    } else if calendar.compare(date, to: today, toGranularity: .day) == .orderedDescending {
+                            //                                        // Future dates - empty circle
+                            //                                    } else if let isCompleted = getSleepDataStatus(for: date) {
+                            //                                        // Past dates with data
+                            //                                        Image(systemName: isCompleted ? "checkmark" : "xmark")
+                            //                                            .font(.system(size: 10, weight: .bold))
+                            //                                    } else {
+                            //                                        // Past dates without data
+                            //                                        Image(systemName: "xmark")
+                            //                                            .font(.system(size: 10, weight: .bold))
+                            //                                    }
+                            //                                }
                         }
                     }
             }
@@ -147,39 +175,16 @@ struct HomeView: View {
                 Spacer()
                 Text("Edit")
                     .underline()
-                    .font(.albertSans(.semibold, size: 16))
+                    .font(.albertSans(.semibold, size: 18))
+                    .onTapGesture {
+                        router.navigateTo(to: .editRoutineView)
+                    }
+            }
+            HStack {
+                ChallengeView(challengeType: .sleep, goalTime: bedTimeGoal)
+                ChallengeView(challengeType: .wakeUp, goalTime: wakeTimeGoal)
             }
             
-            RoundedRectangle(cornerRadius: 15)
-                .fill(
-                    LinearGradient(
-                        stops: [
-                            Gradient.Stop(color: Color(hex: "1C1B3A"), location: 0.0),
-                            Gradient.Stop(color: Color(hex: "010103"), location: 1.0)
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(height: 160)
-                .overlay {
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack {
-                            Image(systemName: "moon.fill")
-                                .font(.system(size: 16))
-                            Text("Sleep at \(sleepTimeText)")
-                                .font(.albertSans(.semibold, size: 20))
-                            Spacer()
-                        }
-                        Text("Get enough sleep to recharge your body")
-                            .font(.albertSans(.semibold, size: 18))
-                        LinearProgressView(progress: 0)
-                        Text("Sleep at 11 pm 5 more days to complete monthly goal")
-                            .font(.albertSans(.bold, size: 12))
-                            .foregroundStyle(.gray)
-                    }
-                    .padding(.horizontal)
-                }
         }
         .padding()
     }
@@ -212,8 +217,107 @@ struct HomeView: View {
         .padding()
         .onTapGesture {
             router.navigateTo(to: .sleep)
+            if isNearSleepTime() {
+                router.navigateTo(to: .sleep)
+            } else {
+                //showNotSleepTimeAlert = true
+            }
+        }
+        .alert("Not Sleeping Time!", isPresented: $showNotSleepTimeAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("It's not your bedtime yet! Your scheduled sleep time is \(sleepTimeText). Come back later!")
         }
     }
+    
+    //MARK: isSleeping view
+    @ViewBuilder
+    private var isSleepingView: some View {
+        Color.black.opacity(0.7)
+            .frame(width: UIScreen.screenWidth, height: UIScreen.screenHeight)
+        RoundedRectangle(cornerRadius: 15)
+            .fill(Color.darkGray)
+            .frame(width: 350, height: hideTimer ? 500 : 650)
+            .overlay {
+                VStack(spacing: 24) {
+                    Text("You are sleeping,\nright?")
+                        .font(.albertSans(.bold, size: 32))
+                        .padding(.bottom)
+                    Image("isSleeping")
+                        .resizable()
+                        .scaledToFit()
+                        .cornerRadius(10)
+                        .modifier(RotatingShadowModifier(primaryColor: primaryColor1, secondaryColor: secondaryColor1))
+                    hideTimer ? nil : Text(viewModel.formatCountdownTime())
+                        .font(.albertSans(.semibold, size: 64))
+                    Text("You can't pick up your phone after this time ends, I will know!")
+                        .font(.albertSans(.semibold, size: 14))
+                        .padding(.bottom, 6)
+                    
+                    Text("Cancel the sleep")
+                        .underline()
+                        .foregroundStyle(.red)
+                        .onTapGesture {
+                            withAnimation {
+                                isSleepingRightNow = false
+                                viewModel.stopSleepCountdown()
+                            }
+                            
+                        }
+                    
+                }
+                .padding()
+                .multilineTextAlignment(.center)
+            }
+            .onAppear {
+                viewModel.startSleepCountdown { result in
+                    if result {
+                        hideTimer = true
+                    }
+                }
+            }
+    }
+    
+    //MARK: afterSleepCanceledView
+    @ViewBuilder
+    private var afterSleepCanceledView: some View {
+        Color.black.opacity(0.7)
+            .frame(width: UIScreen.screenWidth, height: UIScreen.screenHeight)
+        RoundedRectangle(cornerRadius: 15)
+            .fill(Color.darkGray)
+            .frame(width: 350, height: hideTimer ? 300 : 500)
+            .overlay {
+                VStack(spacing: 24) {
+                    Text("Sleep interrupted!")
+                        .font(.albertSans(.bold, size: 32))
+                        .padding(.bottom)
+                    
+                    Text("You picked up your phone so your sleep is inturrepted.")
+                        .font(.albertSans(.semibold, size: 14))
+                        .padding(.bottom, 6)
+                    
+                    CustomButton(title: "I put away my phone, start sleeping.", action: {
+                        withAnimation {
+                            showCanceledView = false
+                            isSleepingRightNow = true
+                        }
+                        hideTimer = false
+                    }, isSecondary: false, size: .small)
+                    Text("Cancel Sleep")
+                        .underline()
+                        .foregroundStyle(.red)
+                        .onTapGesture {
+                            withAnimation {
+                                showCanceledView = false
+                            }
+                        }
+                }
+                .padding()
+                .multilineTextAlignment(.center)
+            }
+    }
+    
+    
     
     //MARK: Is Date Selected
     private func isDateSelected(_ date: Date) -> Bool {
@@ -222,16 +326,51 @@ struct HomeView: View {
     
     //MARK: get sleep datta status
     private func getSleepDataStatus(for date: Date) -> Bool? {
+        // Only return status for past dates
+        guard date <= Date() else { return nil }
+        
         return userLogs.first { log in
             Calendar.current.isDate(log.date, inSameDayAs: date)
         }?.isCompleted
     }
+    
+    //MARK: isNearSleepTime
+    private func isNearSleepTime() -> Bool {
+        guard let user = user,
+              let goalTimeString = user.bedTime else {
+            return false
+        }
+        
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "HH:mm"
+        
+        guard let goalTime = dateFormatter.date(from: goalTimeString) else {
+            return false
+        }
+        
+        let now = Date()
+        let calendar = Calendar.current
+        
+        // Get current hour and minute
+        let currentHour = calendar.component(.hour, from: now)
+        let currentMinute = calendar.component(.minute, from: now)
+        
+        // Get goal hour and minute
+        let goalHour = calendar.component(.hour, from: goalTime)
+        let goalMinute = calendar.component(.minute, from: goalTime)
+        
+        // Convert both times to minutes since midnight for easier comparison
+        let currentTimeInMinutes = currentHour * 60 + currentMinute
+        let goalTimeInMinutes = goalHour * 60 + goalMinute
+        
+        // Allow starting sleep routine within 30 minutes before goal time
+        let timeBuffer = 30
+        let difference = abs(currentTimeInMinutes - goalTimeInMinutes)
+        
+        return difference <= timeBuffer
+    }
+    
 }
-#Preview {
-    HomeView(viewModel: HomeViewModel(authManager: AuthManager()))
-        .preferredColorScheme(.dark)
-}
-
 
 struct LinearProgressView: View {
     let progress: Double
@@ -252,3 +391,62 @@ struct LinearProgressView: View {
     }
 }
 
+struct ChallengeView: View {
+    var challengeType: ChallengeType
+    var goalTime: String
+    
+    enum ChallengeType {
+        case wakeUp, sleep
+        
+        var title: String {
+            switch self {
+            case .wakeUp:
+                "Get enough sleep to recharge your body"
+            case .sleep:
+                "Start your day with energy and focus"
+            }
+        }
+        
+        var subTitle: String {
+            switch self {
+            case .wakeUp:
+                "Wake up 5 more days to complete weekly goal"
+            case .sleep:
+                "Sleep 5 more days to complete weekly goal"
+            }
+        }
+    }
+    
+    var body: some View {
+        RoundedRectangle(cornerRadius: 15)
+            .fill(
+                LinearGradient(
+                    stops: [
+                        Gradient.Stop(color: Color(hex: "1C1B3A"), location: 0.0),
+                        Gradient.Stop(color: Color(hex: "010103"), location: 1.0)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .frame(height: 160)
+            .overlay {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack {
+                        Image(systemName: challengeType == .sleep ? "moon.fill" : "sun.max.fill")
+                            .font(.system(size: 16))
+                        Text("\(goalTime)")
+                            .font(.albertSans(.semibold, size: 14))
+                        Spacer()
+                    }
+                    Text(challengeType.title)
+                        .font(.albertSans(.semibold, size: 12))
+                    LinearProgressView(progress: 0)
+                    Text(challengeType.subTitle)
+                        .font(.albertSans(.bold, size: 8))
+                        .foregroundStyle(.gray)
+                }
+                .padding()
+            }
+    }
+}

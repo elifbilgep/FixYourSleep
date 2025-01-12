@@ -7,59 +7,66 @@
 
 import SwiftUI
 struct OnboardingView: View {
-    @State private var selectedDate = Date()
-    @State private var showTimePicker = false
-    @State private var offset: CGFloat = 0
-    @StateObject private var motionManager = MotionManager()
+    //MARK: Properties
     @EnvironmentObject private var router: RouterManager
-    @StateObject private var viewModel: OnboardingViewModel
     @EnvironmentObject private var userStateManager: UserStateManager
     
-    init(onboardingViewModel: OnboardingViewModel) {
-        _viewModel = StateObject(wrappedValue: onboardingViewModel)
+    @AppStorage(AppStorageKeys.isFirstTime) private var isFirstTime: Bool = true
+    @AppStorage(AppStorageKeys.bedTimeGoal) private var bedTimeGoal = "00:00"
+   
+    @StateObject private var motionManager = MotionManager()
+    @StateObject private var viewModel: OnboardingViewModel
+
+    @State private var hasAskedForPermission = false
+    @State private var wakeUpTime = Date()
+    @State private var showWakeUpPicker = false
+    @State private var bedTime = Date()
+    @State private var showTimePicker = false
+    @State private var currentTab = 0    
+   
+    //MARK: Init
+    init(viewModel: OnboardingViewModel) {
+        _viewModel = StateObject(wrappedValue: viewModel)
     }
     
-    private var timeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
-    
+    //MARK: body
     var body: some View {
         ZStack {
-            backgroundImage
-            VStack(spacing: 100) {
-                VStack(alignment: .leading) {
-                    Text("When do\nyou want to\nsleep?")
-                        .font(.albertSans(.semibold, size: 48))
-                        .padding(.leading, 20)
-                   
-                }
-                .frame(width: UIScreen.screenWidth, alignment: .leading)
-                
-                HStack {
-                    Spacer()
-                    Text(timeFormatter.string(from: selectedDate))
-                        .font(.albertSans(.semibold, size: 64))
-                        .onTapGesture {
-                            withAnimation(.spring()) {
-                                showTimePicker = true
-                                offset = 0
-                            }
-                        }
-                    Spacer()
-                }
-                
-                CustomButton(title: "Continue") {
-                    handleContinue()
-                }
-             
+            Color.blackBackgroundColor
+            TabView(selection: $currentTab) {
+                PageOne()
+                    .tag(0)
+               PageTwo()
+                    .tag(1)
+                PageThree(
+                    hasAskedForPermission: $hasAskedForPermission,
+                    currentTab: $currentTab,
+                    viewModel: viewModel)
+                    .tag(2)
+                PageFour()
+                    .tag(3)
             }
-            .frame(width: 300)
-            .foregroundStyle(.white)
+            .tabViewStyle(.page)
+            .padding(.bottom)
             
+            if currentTab < 3 {
+                CustomButton(title: "Next") {
+                    handleNextButton()
+                }
+                .offset(y: 300)
+            }
+            else if currentTab == 3 {
+                CustomButton(title: "Get Started") {
+                    handleContinue()
+                    isFirstTime = false
+                }
+                .offset(y: 300)
+            }
             if showTimePicker {
-                timePickerView
+                CustomTimePickerView(
+                    isPresented: $showTimePicker,
+                    selectedDate: $bedTime
+                )
             }
             
             if viewModel.isLoading {
@@ -81,25 +88,35 @@ struct OnboardingView: View {
                 Text(error.localizedDescription)
             }
         }
-        .onAppear {
-
-//            print("onboarrding view fysuser:", userStateManager.fysUser?.id)
-//            print("onboarrding view user:", userStateManager.user?.uid)
+    }
+    
+    //MARK: Handle Next Button
+    private func handleNextButton() {
+        if currentTab == 2 && !viewModel.notificationManager.isNotificationsEnabled && !hasAskedForPermission {
+            Task {
+                await viewModel.requestNotificationPermission(onGranted: {
+                    currentTab += 1
+                })
+            }
+        } else {
+            withAnimation {
+                currentTab += 1
+            }
         }
     }
     
+    //MARK: Handle Continue
     private func handleContinue() {
         Task {
-            // Update the user's sleep time
-            if let user = userStateManager.fysUser {
-                print("🧠 there fyu user")
+            guard let user = userStateManager.user else { return }
+                bedTimeGoal = bedTime.dateToHHMM()
+                                    
                 await viewModel.updateGoalSleepingTime(
-                    for: user,
-                    newTime: timeFormatter.string(from: selectedDate)
+                    id: user.uid,
+                    bedTime: bedTimeGoal,
+                    wakeTime: wakeUpTime.dateToHHMM()
                 )
-            } else {
-                print("🧠 there no fyu user")
-            }
+        
             // Only navigate if there was no error
             if viewModel.error == nil {
                 await MainActor.run {
@@ -108,83 +125,5 @@ struct OnboardingView: View {
             }
         }
     }
-    
-    private func dismissPicker() {
-        withAnimation(.spring()) {
-            offset = UIScreen.main.bounds.height
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                showTimePicker = false
-                offset = 0
-            }
-        }
-    }
-    
-    @ViewBuilder
-    private var timePickerView: some View {
-        // Semi-transparent background
-        Color.black.opacity(0.5)
-            .ignoresSafeArea()
-            .opacity(1 - (abs(offset) / 300.0))
-            .onTapGesture {
-                dismissPicker()
-            }
-        
-        // Time Picker
-        VStack {
-            HStack {
-                Button("Cancel") {
-                    dismissPicker()
-                }
-                Spacer()
-                Button("Done") {
-                    dismissPicker()
-                }
-            }
-            .padding()
-            .foregroundColor(.white)
-            
-            DatePicker("Select Time",
-                      selection: $selectedDate,
-                      displayedComponents: .hourAndMinute)
-                .datePickerStyle(.wheel)
-                .labelsHidden()
-        }
-        .background(RoundedRectangle(cornerRadius: 16)
-            .fill(Color.darkGray))
-        .offset(y: offset)
-        .gesture(
-            DragGesture()
-                .onChanged { gesture in
-                    if gesture.translation.height > 0 {
-                        offset = gesture.translation.height
-                    }
-                }
-                .onEnded { gesture in
-                    if gesture.translation.height > 100 {
-                        dismissPicker()
-                    } else {
-                        withAnimation(.spring()) {
-                            offset = 0
-                        }
-                    }
-                }
-        )
-        .padding()
-        .transition(.move(edge: .bottom))
-        .tint(.white)
-    }
-    
-    @ViewBuilder
-    private var backgroundImage: some View {
-        Image("space")
-            .resizable()
-            .scaledToFill()
-            .frame(maxWidth: UIScreen.screenWidth, maxHeight: UIScreen.screenHeight)
-            .modifier(ParallaxMotionModifier(
-                x: CGFloat(motionManager.x),
-                y: CGFloat(motionManager.y)
-            ))
-            .scaleEffect(1.1)
-            .frame(width: UIScreen.screenWidth, height: UIScreen.screenHeight)
-    }
 }
+

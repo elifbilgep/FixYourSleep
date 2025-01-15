@@ -12,4 +12,5 @@ enum AppStorageKeys {
     static let isFirstTime = "isFirsTime"
     static let bedTimeGoal = "bedTimeGoal"
     static let wakeTimeGoal = "wakeTimeGoal"
+    static let username = "username"
 }

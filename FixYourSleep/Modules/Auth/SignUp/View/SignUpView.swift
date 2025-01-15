@@ -9,7 +9,7 @@ import SwiftUI
 import _AuthenticationServices_SwiftUI
 
 struct SignUpView: View {
-    @State private var username = ""
+    @AppStorage(AppStorageKeys.username) private var username = ""
     @State private var email = ""
     @State private var password = ""
     @State private var isTermsAndViewChecked = false
@@ -52,6 +52,7 @@ struct SignUpView: View {
         }
     }
     
+    //MARK: Header View
     @ViewBuilder
     private var headerView: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -117,7 +118,14 @@ struct SignUpView: View {
     private var signUpButton: some View {
         Button {
             Task {
-                let _ = try await viewModel.signUp(username: username, email: email, password: password)
+                try await viewModel.signUp(username: username, mail: email, password: password) { result in
+                    switch result {
+                    case .success(_):
+                        print("✅ Successfully created user on Firebase Auth!")
+                   case .failure(_):
+                        print("‼️ Failed to create user on Firebase Auth!")
+                    }
+                }
             }
         } label: {
             Text("Sign up")
@@ -142,19 +150,23 @@ struct SignUpView: View {
     
     @ViewBuilder
     private var appleSignInButton: some View {
-        SignInWithAppleButton(
-            .signIn,
-            onRequest: { request in
-                viewModel.handleAppleSignInRequest(request)
-            },
-            onCompletion: { result in
-                viewModel.handleAppleSignInCompletion(result)
-            }
-        )
-        .frame(width: UIScreen.screenWidth - 50 , height: 50)
-        .signInWithAppleButtonStyle(.black)
-        .cornerRadius(10)
-        .foregroundColor(.white)
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.black)
+                .frame(width: UIScreen.screenWidth - 50, height: 50)
+            SignInWithAppleButton(
+                .signIn,
+                onRequest: { request in
+                    viewModel.handleAppleSignInRequest(request)
+                },
+                onCompletion: { result in
+                    viewModel.handleAppleSignInCompletion(result)
+                }
+            )
+            .signInWithAppleButtonStyle(.black)
+            .cornerRadius(10)
+        }
+        .frame(width: UIScreen.screenWidth - 50, height: 50)
     }
     
     @ViewBuilder
@@ -176,3 +188,4 @@ struct SignUpView: View {
         }
     }
 }
+

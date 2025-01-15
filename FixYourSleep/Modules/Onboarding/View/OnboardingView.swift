@@ -13,17 +13,19 @@ struct OnboardingView: View {
     
     @AppStorage(AppStorageKeys.isFirstTime) private var isFirstTime: Bool = true
     @AppStorage(AppStorageKeys.bedTimeGoal) private var bedTimeGoal = "00:00"
-   
+    @AppStorage(AppStorageKeys.wakeTimeGoal) private var wakeTimeGoal = "09:00"
+    @AppStorage(AppStorageKeys.username) private var username = ""
+    
     @StateObject private var motionManager = MotionManager()
     @StateObject private var viewModel: OnboardingViewModel
-
+    
     @State private var hasAskedForPermission = false
     @State private var wakeUpTime = Date()
     @State private var showWakeUpPicker = false
     @State private var bedTime = Date()
     @State private var showTimePicker = false
-    @State private var currentTab = 0    
-   
+    @State private var currentTab = 0
+    
     //MARK: Init
     init(viewModel: OnboardingViewModel) {
         _viewModel = StateObject(wrappedValue: viewModel)
@@ -36,20 +38,20 @@ struct OnboardingView: View {
             TabView(selection: $currentTab) {
                 PageOne()
                     .tag(0)
-               PageTwo()
+                PageTwo()
                     .tag(1)
                 PageThree(
                     hasAskedForPermission: $hasAskedForPermission,
                     currentTab: $currentTab,
                     viewModel: viewModel)
-                    .tag(2)
+                .tag(2)
                 PageFour(
                     bedTime: $bedTime,
                     wakeUpTime: $wakeUpTime,
                     showTimePicker: $showTimePicker,
                     showWakeUpPicker: $showWakeUpPicker
                 )
-                    .tag(3)
+                .tag(3)
             }
             .tabViewStyle(.page)
             .padding(.bottom)
@@ -113,19 +115,35 @@ struct OnboardingView: View {
     //MARK: Handle Continue
     private func handleContinue() {
         Task {
-            guard let user = userStateManager.user else { return }
-                bedTimeGoal = bedTime.dateToHHMM()
-                                    
-                await viewModel.updateGoalSleepingTime(
-                    id: user.uid,
-                    bedTime: bedTimeGoal,
-                    wakeTime: wakeUpTime.dateToHHMM()
-                )
-        
-            // Only navigate if there was no error
-            if viewModel.error == nil {
+            guard let user = userStateManager.user else {
+                viewModel.error = NSError(domain: "Onboarding", code: 1, userInfo: [NSLocalizedDescriptionKey: "User not found"])
+                return
+            }
+            
+            bedTimeGoal = bedTime.dateToHHMM()
+            wakeTimeGoal = wakeUpTime.dateToHHMM()
+            
+            let newFYUser = FYSUser(
+                id: user.uid,
+                userName: username,
+                email: user.email ?? "",
+                bedTime: bedTimeGoal,
+                wakeTime: wakeTimeGoal,
+                notificationTime: nil,
+                isAlarmEnabled: false,
+                isNotificationEnabled: viewModel.notificationManager.isNotificationsEnabled,
+                sleepData: nil
+            )
+            
+            do {
+                try await viewModel.createNewUserForMailSignUp(user: newFYUser)
+                
                 await MainActor.run {
                     router.navigateTo(to: .splash)
+                }
+            } catch {
+                await MainActor.run {
+                    viewModel.error = error
                 }
             }
         }

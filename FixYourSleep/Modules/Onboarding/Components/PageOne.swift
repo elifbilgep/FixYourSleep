@@ -8,7 +8,6 @@
 import SwiftUI
 
 struct PageOne: View {
-    var (primaryColor, secondaryColor) = extractDominantColors(from: "sleepyBoy")
     
     var body: some View {
         VStack(spacing: 24) {
@@ -18,7 +17,6 @@ struct PageOne: View {
                 .cornerRadius(15)
                 .frame(width: 350)
                 .padding(.bottom, 30)
-                .modifier(RotatingShadowModifier(primaryColor: primaryColor, secondaryColor: secondaryColor))
             Text("Is Social Media Keeping You Up at All Night?")
                 .font(.albertSans(.bold, size: 24))
             

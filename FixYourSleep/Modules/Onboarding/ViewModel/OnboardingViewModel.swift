@@ -69,4 +69,26 @@ final class OnboardingViewModel: ObservableObject {
             self.error = error
         }
     }
+    
+    func createNewUserForMailSignUp(user: FYSUser) async throws {
+        let newUser = FYSUser(
+            id: user.id,
+            userName: user.userName,
+            email: user.email,
+            bedTime: user.bedTime,
+            wakeTime: user.wakeTime,
+            notificationTime: nil,
+            isAlarmEnabled: false,
+            isNotificationEnabled: false,
+            sleepData: nil
+        )
+        
+        let result = await userService.createUser(newUser)
+        switch result {
+        case .success:
+            print("New user data uploaded to Firestore")
+        case .failure(let error):
+            throw error
+        }
+    }
 }

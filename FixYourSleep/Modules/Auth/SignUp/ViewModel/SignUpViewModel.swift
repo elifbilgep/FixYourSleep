@@ -14,38 +14,35 @@ import FirebaseAuth
 
 @MainActor
 class SignUpViewModel: ObservableObject {
+    //MARK: Properties
     private let authManager: AuthManagerProtocol
     private let userService: UserServiceProtocol
     @Published var isLoading = false
     @Published var errorMessage: String?
     private var currentNonce: String?
     
+    //MARK: Init
     init(authManager: AuthManagerProtocol, userService: UserServiceProtocol) {
         self.authManager = authManager
         self.userService = userService
     }
     
-    func signUp(username: String, email: String, password: String) async throws -> FYSUser {
-        try await mailSignUp(mail: email, password: password)
-        let currentUser = try await authManager.getCurrentUser()
+    //MARK: Sign Up
+    func signUp(username: String, mail: String, password: String, completion: @escaping (Result<Void, Error>) -> Void) async throws {
+        isLoading = true
+        defer { isLoading = false }
         
-        let newUser = FYSUser(
-            id: currentUser.uid,
-            userName: username,
-            email: email,
-            bedTime: nil,
-            wakeTime: nil,
-            notificationTime: nil,
-            isAlarmEnabled: nil,
-            isNotificationEnabled: nil,
-            sleepData: nil
-        )
-        
-        try await createNewUserForMailSignUp(user: newUser)
-        
-        return newUser
+        do {
+            try await authManager.mailSignUp(mail: mail, password: password)
+            isLoading = false
+        } catch {
+            isLoading = false
+            print("‼️ Error occurred: \(error)")
+            throw error
+        }
     }
     
+    //MARK: Google Sign In
     func googleSignIn() {
         Task {
             do {
@@ -62,6 +59,7 @@ class SignUpViewModel: ObservableObject {
         }
     }
     
+    //MARK: Handle User Sign In from Google Sign in
     private func handleUserSignIn(userId: String, authUser: GIDProfileData) async throws {
         let result = await userService.getUser(id: userId)
         
@@ -95,41 +93,8 @@ class SignUpViewModel: ObservableObject {
             _ = await userService.createUser(newUser)
         }
     }
-    @MainActor
-    func mailSignUp(mail: String, password: String) async throws {
-        isLoading = true
-        defer { isLoading = false }
-        
-        do {
-            try await authManager.mailSignUp(mail: mail, password: password)
-        } catch {
-            print("‼️ Error occurred: \(error)")
-            throw error
-        }
-    }
     
-    func createNewUserForMailSignUp(user: FYSUser) async throws {
-        let newUser = FYSUser(
-            id: user.id,
-            userName: user.userName,
-            email: user.email,
-            bedTime: nil,
-            wakeTime: nil,
-            notificationTime: nil,
-            isAlarmEnabled: nil,
-            isNotificationEnabled: nil,
-            sleepData: nil
-        )
-        
-        let result = await userService.createUser(newUser)
-        switch result {
-        case .success:
-            print("New user data uploaded to Firestore")
-        case .failure(let error):
-            throw error
-        }
-    }
-    
+    //MARK: Handle Apple sign in request
     func handleAppleSignInRequest(_ request: ASAuthorizationAppleIDRequest) {
         request.requestedScopes = [.fullName, .email]
         let nonce = authManager.randomNonceString(length: 32)
@@ -137,6 +102,7 @@ class SignUpViewModel: ObservableObject {
         request.nonce = authManager.sha256(nonce)
     }
     
+    //MARK: Handle apple sing in completion
     func handleAppleSignInCompletion(_ result: Result<ASAuthorization, Error>) {
         switch result {
         case .success(let authorization):
@@ -183,6 +149,7 @@ class SignUpViewModel: ObservableObject {
         }
     }
     
+    //MARK: Handle Error
     private func handleError(_ error: Error) {
         if let authError = error as? AuthErrorCode {
             switch authError {
@@ -199,6 +166,7 @@ class SignUpViewModel: ObservableObject {
         print("Error in sign in: \(error)")
     }
     
+    //MARK: Fetch User if Available from firestore
     func fetchUserIfAvailable(with userId: String) async -> FYSUser? {
         let result = await userService.getUser(id: userId)
         

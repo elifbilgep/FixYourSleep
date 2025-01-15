@@ -11,17 +11,22 @@ import WidgetKit
 struct HomeView: View {
     //MARK: Properties
     @StateObject private var viewModel: HomeViewModel
+    
     @EnvironmentObject private var userSateManager: UserStateManager
     @EnvironmentObject private var router: RouterManager
+    
     @State private var selectedDate: Date = Date()
     @State private var showNotSleepTimeAlert: Bool = false
+    
     private var user: FYSUser? { userSateManager.fysUser }
+    
     @AppStorage(AppStorageKeys.isSleepingRightNow) private var isSleepingRightNow: Bool = false
     @AppStorage(AppStorageKeys.bedTimeGoal) private var bedTimeGoal = "00:00"
     @AppStorage(AppStorageKeys.wakeTimeGoal) private var wakeTimeGoal = "00:00"
+    @AppStorage(AppStorageKeys.username) private var username = ""
+    
     @State private var hideTimer = false
     @State private var showCanceledView = false
-    private var (primaryColor1, secondaryColor1) = extractDominantColors(from: "sleepyBoy")
     
     //MARK: Init
     init(viewModel: HomeViewModel) {
@@ -93,6 +98,7 @@ struct HomeView: View {
                     Task {
                         await viewModel.signOut()
                     }
+                    username = ""
                 }
             Spacer()
             Image(systemName: "bell.fill")
@@ -247,7 +253,6 @@ struct HomeView: View {
                         .resizable()
                         .scaledToFit()
                         .cornerRadius(10)
-                        .modifier(RotatingShadowModifier(primaryColor: primaryColor1, secondaryColor: secondaryColor1))
                     hideTimer ? nil : Text(viewModel.formatCountdownTime())
                         .font(.albertSans(.semibold, size: 64))
                     Text("You can't pick up your phone after this time ends, I will know!")

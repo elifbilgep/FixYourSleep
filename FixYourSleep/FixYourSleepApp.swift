@@ -30,7 +30,11 @@ struct FixYourSleepApp: App {
         let authManager = AuthManager()
         let userService = UserService(firebaseService: firebaseService)
         self.notificationmanager = NotificationManager.shared
-        viewModelFactory = ViewModelFactory(authManager: authManager, userService: userService, notificationManager: notificationmanager)
+        viewModelFactory = ViewModelFactory(
+            authManager: authManager,
+            userService: userService,
+            notificationManager: notificationmanager
+        )
     }
     
     var body: some Scene {

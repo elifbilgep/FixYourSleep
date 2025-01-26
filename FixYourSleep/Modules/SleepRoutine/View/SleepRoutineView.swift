@@ -31,7 +31,8 @@ struct SleepRoutineView: View {
                 CustomButton(title: "Continue") {
                     isSheetPresented = true
                 }
-                .padding(.bottom, 150)
+                cancelRoutine
+                    .padding(.bottom, 150)
             }
         }
         .ignoresSafeArea()
@@ -311,8 +312,22 @@ struct SleepRoutineView: View {
     
     private func cancelTheSleep() {
         isSheetPresented = false
-        router.navigateTo(to: .home)
+        router.navigateBack()
     }
+    
+    //MARK: Cancel Routine
+    @ViewBuilder
+    private var cancelRoutine: some View {
+        Text("Cancel Routine")
+            .underline()
+            .foregroundColor(.red)
+            .font(.albertSans(.medium, size: 16))
+            .onTapGesture {
+                cancelTheSleep()
+            }
+            .padding()
+    }
+    
 }
 
 //MARK: Step

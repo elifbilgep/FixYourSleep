@@ -63,5 +63,10 @@ class SleepRoutineViewModel: ObservableObject {
         let seconds = timeRemaining % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
+    
+    //MARK: save user log as sleeped
+    func saveUserSleepLog() {
+        
+    }
 
 }

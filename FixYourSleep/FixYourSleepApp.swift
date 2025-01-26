@@ -29,10 +29,12 @@ struct FixYourSleepApp: App {
         let firebaseService = FirebaseService(database: firestore)
         let authManager = AuthManager()
         let userService = UserService(firebaseService: firebaseService)
+        let sleepService = SleepService(firebaseService: firebaseService)
         self.notificationmanager = NotificationManager.shared
         viewModelFactory = ViewModelFactory(
             authManager: authManager,
             userService: userService,
+            sleepService: sleepService,
             notificationManager: notificationmanager
         )
     }

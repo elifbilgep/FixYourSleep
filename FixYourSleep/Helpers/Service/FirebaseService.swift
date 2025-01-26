@@ -19,7 +19,7 @@ protocol FirebaseServiceProtocol {
     func save<T: FirebaseIdentifiable>(_ value: T, to collection: String) async -> Result<T, Error>
     func delete<T: FirebaseIdentifiable>(_ value: T, in collection: String) async -> Result<Void, Error>
     func update<T: FirebaseIdentifiable>(_ value: T, in collection: String, with fields: [String: Any]) async -> Result<Bool, Error>
-    func updateField(in collection: String, documentID: String, fields: [String: Any]) async -> Result<Bool, Error>
+    func updateField(in collection: String, documentID: String, fields: [String: Any]) async -> Result<Void, Error>
 }
 
 class FirebaseService: FirebaseServiceProtocol {
@@ -123,17 +123,17 @@ extension FirebaseService {
     }
     
     func updateField(
-           in collection: String,
-           documentID: String,
-           fields: [String: Any]
-       ) async -> Result<Bool, Error> {
-           let ref = database.collection(collection).document(documentID)
-           do {
-               try await ref.updateData(fields)
-               return .success(true)
-           } catch {
-               return .failure(FirebaseError.unknown(error))
-           }
-       }
+        in collection: String,
+        documentID: String,
+        fields: [String: Any]
+    ) async -> Result<Void, Error> {
+        let ref = database.collection(collection).document(documentID)
+        do {
+            try await ref.updateData(fields)
+            return .success(())
+        } catch {
+            return .failure(FirebaseError.unknown(error))
+        }
+    }
 }
 

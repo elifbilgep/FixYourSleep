@@ -78,8 +78,10 @@ struct OnboardingView: View {
             
             if viewModel.isLoading {
                 ProgressView()
-                    .tint(.white)
+                    .opacity(0.5)
             }
+                
+            
         }
         .ignoresSafeArea()
         .navigationBarBackButtonHidden()
@@ -92,7 +94,7 @@ struct OnboardingView: View {
             }
         } message: {
             if let error = viewModel.error {
-                Text(error.localizedDescription)
+                Text(error)
             }
         }
     }
@@ -116,7 +118,7 @@ struct OnboardingView: View {
     private func handleContinue() {
         Task {
             guard let user = userStateManager.user else {
-                viewModel.error = NSError(domain: "Onboarding", code: 1, userInfo: [NSLocalizedDescriptionKey: "User not found"])
+                viewModel.error = "User not found"
                 return
             }
             
@@ -143,7 +145,7 @@ struct OnboardingView: View {
                 }
             } catch {
                 await MainActor.run {
-                    viewModel.error = error
+                    viewModel.error = error.localizedDescription
                 }
             }
         }

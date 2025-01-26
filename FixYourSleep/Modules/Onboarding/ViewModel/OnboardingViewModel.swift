@@ -13,7 +13,7 @@ final class OnboardingViewModel: ObservableObject {
     private let userService: UserServiceProtocol
     private let authManager: AuthManagerProtocol
     @Published var isLoading = false
-    @Published var error: Error?
+    @Published var error: String?
     
     //MARK: Init
     init(notificationManager: NotificationManager, userService: UserServiceProtocol, authManager: AuthManagerProtocol) {
@@ -36,8 +36,15 @@ final class OnboardingViewModel: ObservableObject {
     }
     
     //MARK: Update Goal
-    func updateGoalSleepingTime(id: String, bedTime: String, wakeTime: String) async {
-        let _ = await userService.updateGoalSleepingTime(id: id, bedTime: bedTime, wakeTime: wakeTime)
+    func updateGoalSleepingTime(id: String, bedTime: String, wakeTime: String, completion: @escaping (Bool) -> Void) async {
+        let result = await userService.updateGoalSleepingTime(id: id, bedTime: bedTime, wakeTime: wakeTime)
+        switch result {
+        case .success(_):
+            completion(true)
+        case .failure(let failure):
+            self.error = failure.localizedDescription
+            completion(false)
+        }
     }
     
     
@@ -51,25 +58,27 @@ final class OnboardingViewModel: ObservableObject {
             print("✅ Successfully updated user with ID:", updatedUser.id)
         case .failure(let updateError):
             print("❌ Failed to update user:", updateError)
-            error = updateError
+            error = updateError.localizedDescription
         }
     }
     
-    func requestNotificationPermission( onGranted: @escaping () -> Void) async {
+    //MARK: Request Notification Permission
+    func requestNotificationPermission(onGranted: @escaping () -> Void) async {
         do {
             let granted = try await notificationManager.requestPermission()
             await MainActor.run {
                 if granted {
                     onGranted()
                 } else {
-                   error = NotificationError.notificationsDenied
+                    error = NotificationError.notificationsDenied.localizedDescription
                 }
             }
         } catch {
-            self.error = error
+            self.error = error.localizedDescription
         }
     }
     
+    //MARK: Create new user for mail signup
     func createNewUserForMailSignUp(user: FYSUser) async throws {
         let newUser = FYSUser(
             id: user.id,

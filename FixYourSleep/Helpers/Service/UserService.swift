@@ -12,7 +12,7 @@ protocol UserServiceProtocol {
     func getUser(id: String) async -> Result<FYSUser, Error>
     func updateUser(_ user: FYSUser) async -> Result<FYSUser, Error>
     func deleteUser(_ user: FYSUser) async -> Result<Void, Error>
-    func updateGoalSleepingTime(id: String, bedTime: String, wakeTime: String) async -> Result<Bool, Error>
+    func updateGoalSleepingTime(id: String, bedTime: String, wakeTime: String) async -> Result<Void, Error>
 }
 
 enum UserServiceError: Error {
@@ -74,7 +74,7 @@ class UserService: UserServiceProtocol {
     }
     
     //MARK: Update Goal Sleeping Time
-    func updateGoalSleepingTime(id: String, bedTime: String, wakeTime: String) async -> Result<Bool, Error> {
+    func updateGoalSleepingTime(id: String, bedTime: String, wakeTime: String) async -> Result<Void, Error> {
         let fields: [String: Any] = [
             "bedTime": bedTime,
             "wakeTime": wakeTime

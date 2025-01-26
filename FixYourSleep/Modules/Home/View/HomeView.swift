@@ -126,7 +126,7 @@ struct HomeView: View {
     @ViewBuilder
     private var calendarView: some View {
         let calendar = Calendar.current
-        let today = Date()
+        let today = calendar.startOfDay(for: Date())
         
         // Calculate dates centered around today
         let dates = (-3...3).compactMap { offset in
@@ -135,6 +135,9 @@ struct HomeView: View {
         
         HStack(spacing: 8) {
             ForEach(dates, id: \.timeIntervalSince1970) { date in
+                let isPast = date < today
+                let isLogAvailable = isPast ? viewModel.sleepLogsByDate[calendar.startOfDay(for: date)] ?? false : nil
+                
                 RoundedRectangle(cornerRadius: 10)
                     .fill(isDateSelected(date) ? .customAccentDark : .darkGray)
                     .frame(width: 45, height: 90, alignment: .center)
@@ -147,26 +150,29 @@ struct HomeView: View {
                                 .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(isDateSelected(date) ? .white : .white.opacity(0.8))
                             
-                            //                            Circle()
-                            //                                .fill(isDateSelected(date) ? Color.customAccent : .customGray)
-                            //                                .frame(width: 18, height: 18)
-                            //                                .overlay {
-                            //                                    if calendar.isDateInToday(date) {
-                            //                                        // Empty circle for today
-                            //                                    } else if calendar.compare(date, to: today, toGranularity: .day) == .orderedDescending {
-                            //                                        // Future dates - empty circle
-                            //                                    } else if let isCompleted = getSleepDataStatus(for: date) {
-                            //                                        // Past dates with data
-                            //                                        Image(systemName: isCompleted ? "checkmark" : "xmark")
-                            //                                            .font(.system(size: 10, weight: .bold))
-                            //                                    } else {
-                            //                                        // Past dates without data
-                            //                                        Image(systemName: "xmark")
-                            //                                            .font(.system(size: 10, weight: .bold))
-                            //                                    }
-                            //                                }
+                            if isPast {
+                                Circle()
+                                    .fill(.gray)
+                                    .frame(width: 18, height: 18)
+                                    .overlay {
+                                        Image(systemName: isLogAvailable == true ? "checkmark" : "xmark")
+                                            .font(.system(size: 10, weight: .bold))
+                                            .foregroundColor(.white)
+                                    }
+                            } else {
+                                Circle()
+                                    .fill(Color.clear)
+                                    .frame(width: 18, height: 18)
+                            }
                         }
                     }
+            }
+        }
+        .onAppear {
+            if let userId = user?.id {
+                Task {
+                    await viewModel.fetchLogsForDates(dates: dates, userId: userId)
+                }
             }
         }
     }
@@ -396,62 +402,3 @@ struct LinearProgressView: View {
     }
 }
 
-struct ChallengeView: View {
-    var challengeType: ChallengeType
-    var goalTime: String
-    
-    enum ChallengeType {
-        case wakeUp, sleep
-        
-        var title: String {
-            switch self {
-            case .wakeUp:
-                "Get enough sleep to recharge your body"
-            case .sleep:
-                "Start your day with energy and focus"
-            }
-        }
-        
-        var subTitle: String {
-            switch self {
-            case .wakeUp:
-                "Wake up 5 more days to complete weekly goal"
-            case .sleep:
-                "Sleep 5 more days to complete weekly goal"
-            }
-        }
-    }
-    
-    var body: some View {
-        RoundedRectangle(cornerRadius: 15)
-            .fill(
-                LinearGradient(
-                    stops: [
-                        Gradient.Stop(color: Color(hex: "1C1B3A"), location: 0.0),
-                        Gradient.Stop(color: Color(hex: "010103"), location: 1.0)
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .frame(height: 160)
-            .overlay {
-                VStack(alignment: .leading, spacing: 14) {
-                    HStack {
-                        Image(systemName: challengeType == .sleep ? "moon.fill" : "sun.max.fill")
-                            .font(.system(size: 16))
-                        Text("\(goalTime)")
-                            .font(.albertSans(.semibold, size: 14))
-                        Spacer()
-                    }
-                    Text(challengeType.title)
-                        .font(.albertSans(.semibold, size: 12))
-                    LinearProgressView(progress: 0)
-                    Text(challengeType.subTitle)
-                        .font(.albertSans(.bold, size: 8))
-                        .foregroundStyle(.gray)
-                }
-                .padding()
-            }
-    }
-}

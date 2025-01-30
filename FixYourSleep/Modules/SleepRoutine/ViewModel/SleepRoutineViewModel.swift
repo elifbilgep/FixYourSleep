@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 class SleepRoutineViewModel: ObservableObject {
     //MARK: Properties
@@ -14,6 +15,8 @@ class SleepRoutineViewModel: ObservableObject {
     ]
     @Published var timeRemaining: Int = 10
     @Published var isTimerRunning: Bool = false
+    @Published var isBookDetected: Bool = false
+    @Published var capturedImage: UIImage? = nil
     private var timer: Timer?
 
 

@@ -8,6 +8,15 @@
 import SwiftUI
 
 struct CustomButton: View {
+    
+    init(title: String, action: @escaping () -> Void, isSecondary: Bool = false, size: Size = .medium, isEnabled: Bool = true) {
+        self.title = title
+        self.action = action
+        self.isSecondary = isSecondary
+        self.size = size
+        self.isEnabled = isEnabled
+    }
+    
     enum Size {
         case small
         case medium
@@ -38,6 +47,7 @@ struct CustomButton: View {
     let action: () -> Void
     var isSecondary: Bool = false
     var size: Size = .medium
+    var isEnabled: Bool
     
     var body: some View {
         Button(action: action) {
@@ -47,7 +57,10 @@ struct CustomButton: View {
                 .frame(width: size.width)
                 .padding(.vertical, size.verticalPadding)
                 .background(
-                    isSecondary ? Color(hex: "1C1B3A") : .white
+                    isEnabled ? isSecondary
+                        ? Color(hex: "1C1B3A") :
+                            .white
+                    : .gray
                 )
                 .cornerRadius(15)
                 .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)

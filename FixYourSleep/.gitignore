@@ -12,3 +12,4 @@ Pods/
 *.plist
 Secrets/
 .env
+APIConstants.swift

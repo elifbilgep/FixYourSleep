@@ -10,6 +10,7 @@ import SwiftUI
 struct SleepRoutineView: View {
     @EnvironmentObject private var userStateManager: UserStateManager
     @State private var currentStep = 0
+    @State private var isCameraPresented = false
     @StateObject private var viewModel: SleepRoutineViewModel
     @AppStorage("isFirstTime") private var isFirstTime: Bool = true
     @State private var isSheetPresented = false
@@ -113,8 +114,8 @@ struct SleepRoutineView: View {
         } else if currentStep == 1 {
             relaxView
                 .frame(width: 400)
-                .presentationDetents([.height(400)])
-                .interactiveDismissDisabled(true)  // Already exists for timer
+                .presentationDetents([.height(.infinity)])
+                .interactiveDismissDisabled(true)
         } else if currentStep == 2 {
             putYourPhoneAway
                 .frame(width: 400)
@@ -205,77 +206,9 @@ struct SleepRoutineView: View {
     //MARK: Relax your mind
     @ViewBuilder
     private var relaxView: some View {
-        VStack {
-            // Header
-            VStack {
-                Text("I will be waiting...")
-                    .font(.albertSans(.semibold, size: 28))
-                    .frame(width: 350, height: 30)
-                    .padding(.bottom)
-                Text("I'll be here for the next 10 minutes. Take this time to read a book and unwind before bed.")
-                    .font(.albertSans(.regular, size: 16))
-                    .frame(width: 350, height: 60)
-                    .multilineTextAlignment(.center)
-            }
-            
-            // Timer Text
-            Text(viewModel.formatTime())
-                .font(.system(size: 64, weight: .bold))
-            
-            // Buttons
-            VStack(spacing: 16) {
-                if viewModel.timeRemaining == 0 {
-                    CustomButton(title: "Continue") {
-                        withAnimation {
-                            currentStep += 1
-                            viewModel.completeStepAndAddNext(1)
-                        }
-                        isSheetPresented = false
-                    }
-                } else if !viewModel.isTimerRunning {
-                    VStack(spacing: 20) {
-                        CustomButton(title: "Start timer") {
-                            withAnimation {
-                                viewModel.startTimer()
-                            }
-                        }
-                        Text("Cancel the sleep")
-                            .foregroundStyle(.red)
-                            .font(.albertSans(.regular, size: 16))
-                            .onTapGesture {
-                                cancelTheSleep()
-                            }
-                    }
-                    
-                } else {
-                    Button(action: {
-                        withAnimation {
-                            viewModel.stopTimer()
-                            viewModel.timeRemaining = 600
-                        }
-                    }) {
-                        Text("Cancel Timer")
-                            .foregroundColor(.red)
-                            .font(.albertSans(.semibold, size: 16))
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.red, lineWidth: 2)
-                            )
-                    }
-                }
-            }
-        }
-        .frame(width: 350)
-        .interactiveDismissDisabled(viewModel.isTimerRunning)
-        .onDisappear {
-            if !viewModel.isTimerRunning {
-                viewModel.timeRemaining = 600
-            }
-        }
+        RelaxView()
     }
-    
+
     //MARK: Put Phone Away View
     @ViewBuilder
     private var putYourPhoneAway: some View {

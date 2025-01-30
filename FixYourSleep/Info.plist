@@ -27,5 +27,7 @@
 		<string>processing</string>
 		<string>remote-notification</string>
 	</array>
+    <key>NSCameraUsageDescription</key>
+    <string>We need access to the camera to detect a book.</string>
 </dict>
 </plist>
